@@ -1,0 +1,398 @@
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]: ◣◢
+      - generic [ref=e5]:
+        - generic [ref=e6]: TOMCAR
+        - generic [ref=e7]: STRATEGY ENGINE
+    - generic [ref=e8]:
+      - generic [ref=e9]: CIRCUIT
+      - generic [ref=e10]: ZELIZIA RING
+      - generic [ref=e11]: 1320 m · 8 corners
+    - generic [ref=e14]: COMPUTING
+  - main [ref=e15]:
+    - complementary [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]: CONFIGURATION
+        - generic [ref=e19]: PARAMS
+      - generic [ref=e20]:
+        - generic [ref=e21]: PRESETS
+        - generic [ref=e22]:
+          - button "DEFAULT" [active] [ref=e23] [cursor=pointer]
+          - button "CALIBRATED ’25" [ref=e24] [cursor=pointer]
+          - button "½ Crr" [ref=e25] [cursor=pointer]
+      - generic [ref=e26]:
+        - generic [ref=e27]: SOLVER
+        - generic [ref=e28]:
+          - button "FAST" [ref=e29] [cursor=pointer]
+          - button "ACCURATE" [ref=e30] [cursor=pointer]
+      - generic [ref=e31]:
+        - generic [ref=e296]:
+          - generic [ref=e297]: VEHICLE
+          - generic [ref=e298]:
+            - generic [ref=e299]:
+              - generic [ref=e300]: Car mass
+              - generic [ref=e301]:
+                - spinbutton [ref=e302]: "35"
+                - text: kg
+            - slider [ref=e303] [cursor=pointer]: "35"
+          - generic [ref=e304]:
+            - generic [ref=e305]:
+              - generic [ref=e306]: Driver mass
+              - generic [ref=e307]:
+                - spinbutton [ref=e308]: "50"
+                - text: kg
+            - slider [ref=e309] [cursor=pointer]: "50"
+          - generic [ref=e310]:
+            - generic [ref=e311]:
+              - generic [ref=e312]: Drag coeff
+              - spinbutton [ref=e314]: "0.180"
+            - slider [ref=e315] [cursor=pointer]: "0.18"
+          - generic [ref=e316]:
+            - generic [ref=e317]:
+              - generic [ref=e318]: Frontal area
+              - generic [ref=e319]:
+                - spinbutton [ref=e320]: "0.462"
+                - text: m²
+            - slider [ref=e321] [cursor=pointer]: "0.46"
+          - generic [ref=e322]:
+            - generic [ref=e323]:
+              - generic [ref=e324]: Rolling resistance
+              - spinbutton [ref=e326]: "0.0015"
+            - slider [ref=e327] [cursor=pointer]: "0.0015"
+          - generic [ref=e328]:
+            - generic [ref=e329]:
+              - generic [ref=e330]: Driveline η
+              - spinbutton [ref=e332]: "0.90"
+            - slider [ref=e333] [cursor=pointer]: "0.9"
+          - generic [ref=e334]:
+            - generic [ref=e335]:
+              - generic [ref=e336]: Rotating inertia
+              - spinbutton [ref=e338]: "0.030"
+            - slider [ref=e339] [cursor=pointer]: "0.03"
+        - generic [ref=e340]:
+          - generic [ref=e341]: ENGINE · HONDA GX35
+          - generic [ref=e342]:
+            - generic [ref=e343]:
+              - generic [ref=e344]: Burst power (wheel)
+              - generic [ref=e345]:
+                - spinbutton [ref=e346]: "600"
+                - text: W
+            - slider [ref=e347] [cursor=pointer]: "600"
+          - generic [ref=e348]:
+            - generic [ref=e349]:
+              - generic [ref=e350]: BSFC
+              - generic [ref=e351]:
+                - spinbutton [ref=e352]: "400"
+                - text: g/kWh
+            - slider [ref=e353] [cursor=pointer]: "400"
+          - generic [ref=e354]:
+            - generic [ref=e355]:
+              - generic [ref=e356]: Restart cost
+              - generic [ref=e357]:
+                - spinbutton [ref=e358]: "0.005"
+                - text: g
+            - slider [ref=e359] [cursor=pointer]: "0.005"
+        - generic [ref=e360]:
+          - generic [ref=e361]: RACE · ARTICLE 226
+          - generic [ref=e362]:
+            - generic [ref=e363]:
+              - generic [ref=e364]: Laps
+              - spinbutton [ref=e366]: "11"
+            - slider [ref=e367] [cursor=pointer]: "11"
+          - generic [ref=e368]:
+            - generic [ref=e369]:
+              - generic [ref=e370]: Time limit
+              - generic [ref=e371]:
+                - spinbutton [ref=e372]: "2100"
+                - text: s
+            - slider [ref=e373] [cursor=pointer]: "2100"
+          - generic [ref=e374]:
+            - generic [ref=e375]:
+              - generic [ref=e376]: Safety margin
+              - spinbutton [ref=e378]: "0.03"
+            - slider [ref=e379] [cursor=pointer]: "0.03"
+        - generic [ref=e380]:
+          - generic [ref=e381]: GRIP & AIR
+          - generic [ref=e382]:
+            - generic [ref=e383]:
+              - generic [ref=e384]: Lateral grip
+              - generic [ref=e385]:
+                - spinbutton [ref=e386]: "4.0"
+                - text: m/s²
+            - slider [ref=e387] [cursor=pointer]: "4"
+          - generic [ref=e388]:
+            - generic [ref=e389]:
+              - generic [ref=e390]: Air density
+              - generic [ref=e391]:
+                - spinbutton [ref=e392]: "1.20"
+                - text: kg/m³
+            - slider [ref=e393] [cursor=pointer]: "1.2"
+      - button "▶ OPTIMISE compute optimal line" [ref=e130] [cursor=pointer]:
+        - generic [ref=e131]: ▶
+        - text: OPTIMISE
+        - generic [ref=e132]: compute optimal line
+    - generic [ref=e133]:
+      - generic [ref=e134]:
+        - generic [ref=e135]:
+          - generic [ref=e136]: LAP TIME
+          - text: 185.1s
+        - generic [ref=e137]:
+          - generic [ref=e138]: FUEL / LAP
+          - text: 1.84mL
+        - generic [ref=e139]:
+          - generic [ref=e140]: ECONOMY
+          - text: 715km/L
+        - generic [ref=e141]:
+          - generic [ref=e142]: PULSES
+          - text: 3/lap
+        - generic [ref=e143]:
+          - generic [ref=e144]: AVG SPEED
+          - text: 25.7km/h
+        - generic [ref=e145]:
+          - generic [ref=e146]: TIME MARGIN
+          - text: +64s
+      - generic [ref=e147]:
+        - generic [ref=e148]:
+          - generic [ref=e149]:
+            - generic [ref=e150]: RACING LINE — BURN / GLIDE MAP
+            - generic [ref=e151]:
+              - text: BURN
+              - text: GLIDE
+          - generic [ref=e154]:
+            - generic:
+              - generic:
+                - img:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: "54"
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: "32"
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: "41"
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: "49"
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: "45"
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: "38"
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: "42"
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: "33"
+                - img
+                - img
+        - generic [ref=e168]:
+          - generic [ref=e169]:
+            - generic [ref=e170]: SPEED TRACE
+            - generic [ref=e171]: km/h · m
+          - generic [ref=e172]:
+            - generic:
+              - generic:
+                - img:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic: "0"
+                        - generic:
+                          - generic: "200"
+                        - generic:
+                          - generic: "400"
+                        - generic:
+                          - generic: "600"
+                        - generic:
+                          - generic: "800"
+                        - generic:
+                          - generic: "1000"
+                        - generic:
+                          - generic: "1200"
+                      - generic:
+                        - generic:
+                          - generic: "20"
+                        - generic:
+                          - generic: "30"
+                        - generic:
+                          - generic: "40"
+                        - generic:
+                          - generic: "50"
+                - img:
+                  - generic:
+                    - generic:
+                      - generic: km/h
+                - img
+        - generic [ref=e173]:
+          - generic [ref=e174]:
+            - generic [ref=e175]: ELEVATION & BURN ZONES
+            - generic [ref=e176]: m
+          - generic [ref=e177]:
+            - generic:
+              - generic:
+                - img:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic: "0"
+                        - generic:
+                          - generic: "200"
+                        - generic:
+                          - generic: "400"
+                        - generic:
+                          - generic: "600"
+                        - generic:
+                          - generic: "800"
+                        - generic:
+                          - generic: "1000"
+                        - generic:
+                          - generic: "1200"
+                      - generic:
+                        - generic:
+                          - generic: "203"
+                        - generic:
+                          - generic: "204"
+                        - generic:
+                          - generic: "205"
+                        - generic:
+                          - generic: "206"
+                - img:
+                  - generic:
+                    - generic:
+                      - generic: m
+                - img
+        - generic [ref=e178]:
+          - generic [ref=e179]:
+            - generic [ref=e180]: PARETO — FUEL vs LAP TIME
+            - generic [ref=e181]: click to set target
+          - generic [ref=e182]:
+            - generic:
+              - generic:
+                - img:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic: "150"
+                        - generic:
+                          - generic: "200"
+                        - generic:
+                          - generic: "250"
+                        - generic:
+                          - generic: "300"
+                      - generic:
+                        - generic:
+                          - generic: "1.8"
+                        - generic:
+                          - generic: "1.9"
+                        - generic:
+                          - generic: "2"
+                        - generic:
+                          - generic: "2.1"
+                        - generic:
+                          - generic: "2.2"
+                        - generic:
+                          - generic: "2.3"
+                        - generic:
+                          - generic: "2.4"
+                        - generic:
+                          - generic: "2.5"
+                - img:
+                  - generic:
+                    - generic:
+                      - generic: lap time (s)
+                    - generic:
+                      - generic: mL/lap
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic: DQ limit
+                - img
+      - generic [ref=e183]:
+        - generic [ref=e184]:
+          - generic [ref=e185]: DRIVER CHEAT-SHEET
+          - generic [ref=e186]:
+            - button "⤓ trajectory.csv" [ref=e187] [cursor=pointer]
+            - button "⤓ strategy.json" [ref=e188] [cursor=pointer]
+        - table [ref=e237]:
+          - rowgroup [ref=e238]:
+            - row "ACTION FROM m TO m LEN m v IN v OUT NOTE" [ref=e239]:
+              - columnheader "ACTION" [ref=e240]
+              - columnheader "FROM m" [ref=e241]
+              - columnheader "TO m" [ref=e242]
+              - columnheader "LEN m" [ref=e243]
+              - columnheader "v IN" [ref=e244]
+              - columnheader "v OUT" [ref=e245]
+              - columnheader "NOTE" [ref=e246]
+          - rowgroup [ref=e247]:
+            - row "GLIDE … 0 108 108 23.5 14.3 engine OFF, coast → 14 km/h" [ref=e248]:
+              - cell "GLIDE …" [ref=e249]
+              - cell "0" [ref=e250]
+              - cell "108" [ref=e251]
+              - cell "108" [ref=e252]
+              - cell "23.5" [ref=e253]
+              - cell "14.3" [ref=e254]
+              - cell "engine OFF, coast → 14 km/h" [ref=e255]
+            - row "BURN ⛽ 108 256 148 14.3 35.8 fire engine → 36 km/h" [ref=e256]:
+              - cell "BURN ⛽" [ref=e257]
+              - cell "108" [ref=e258]
+              - cell "256" [ref=e259]
+              - cell "148" [ref=e260]
+              - cell "14.3" [ref=e261]
+              - cell "35.8" [ref=e262]
+              - cell "fire engine → 36 km/h" [ref=e263]
+            - row "GLIDE … 256 926 670 35.8 18.0 engine OFF, coast → 18 km/h" [ref=e264]:
+              - cell "GLIDE …" [ref=e265]
+              - cell "256" [ref=e266]
+              - cell "926" [ref=e267]
+              - cell "670" [ref=e268]
+              - cell "35.8" [ref=e269]
+              - cell "18.0" [ref=e270]
+              - cell "engine OFF, coast → 18 km/h" [ref=e271]
+            - row "BURN ⛽ 926 1063 137 18.0 33.9 fire engine → 34 km/h" [ref=e272]:
+              - cell "BURN ⛽" [ref=e273]
+              - cell "926" [ref=e274]
+              - cell "1063" [ref=e275]
+              - cell "137" [ref=e276]
+              - cell "18.0" [ref=e277]
+              - cell "33.9" [ref=e278]
+              - cell "fire engine → 34 km/h" [ref=e279]
+            - row "GLIDE … 1063 1304 241 33.9 18.8 engine OFF, coast → 19 km/h" [ref=e280]:
+              - cell "GLIDE …" [ref=e281]
+              - cell "1063" [ref=e282]
+              - cell "1304" [ref=e283]
+              - cell "241" [ref=e284]
+              - cell "33.9" [ref=e285]
+              - cell "18.8" [ref=e286]
+              - cell "engine OFF, coast → 19 km/h" [ref=e287]
+            - row "BURN ⛽ 1304 0 16 18.8 22.8 fire engine → 23 km/h" [ref=e288]:
+              - cell "BURN ⛽" [ref=e289]
+              - cell "1304" [ref=e290]
+              - cell "0" [ref=e291]
+              - cell "16" [ref=e292]
+              - cell "18.8" [ref=e293]
+              - cell "22.8" [ref=e294]
+              - cell "fire engine → 23 km/h" [ref=e295]
+  - generic [ref=e192]:
+    - generic [ref=e194]: COMPUTING OPTIMAL LINE
+    - generic [ref=e195]: solving dynamic program…
+  - img [ref=e196]
