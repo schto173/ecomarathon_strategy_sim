@@ -20,6 +20,7 @@ class Vehicle:
     Cd: float = 0.18                    # CALIBRATE drag coefficient ("quite aerodynamic")
     frontal_area: float = 0.68 * 0.68   # m^2 (0.68 m wide x 0.68 m high bounding box)
     Crr: float = 0.0015                 # CALIBRATE rolling resistance coefficient (eco tyres)
+    Crr_lateral: float = 0.0003         # lateral tire loss coefficient
     driveline_eff: float = 0.90         # wheel power / engine power while driving
 
     @property

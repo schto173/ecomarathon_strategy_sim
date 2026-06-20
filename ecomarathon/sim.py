@@ -48,18 +48,19 @@ class Trajectory:
 
 
 def step_segment(v0: float, i: int, u: int, track: Track, cfg: Config):
-    """Integrate one track segment ``i`` under control ``u``.
-
-    Returns ``(v_end, dt, dfuel_g)``.
-    """
     st, ct, ds = track.sin_theta[i], track.cos_theta[i], track.ds[i]
     sub = cfg.solver.substeps
     h = ds / sub
     fr = veh.fuel_rate(u, cfg)
+    kappa = track.kappa[i]  # ADD THIS
 
     def dvds(vv: float) -> float:
         vv = vv if vv > _V_FLOOR else _V_FLOOR
-        return veh.net_accel(vv, st, ct, u, cfg) / vv
+        a_lat = kappa * vv ** 2                                          # ADD THIS
+        f_lat = cfg.vehicle.Crr_lateral * cfg.vehicle.mass * a_lat      # ADD THIS
+        base_accel = veh.net_accel(vv, st, ct, u, cfg)
+        lateral_decel = f_lat / (cfg.vehicle.mass * (1.0 + cfg.vehicle.inertia_factor))  # ADD THIS
+        return (base_accel - lateral_decel) / vv                        # CHANGE THIS
 
     v = v0
     dt = 0.0

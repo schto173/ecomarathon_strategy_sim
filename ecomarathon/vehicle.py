@@ -63,3 +63,9 @@ def fuel_rate(u: int, cfg: Config) -> float:
     if u == BURN:
         return cfg.engine.fuel_rate_burn(cfg.vehicle.driveline_eff)
     return cfg.engine.off_fuel_rate
+
+
+def lateral_loss_force(self, v: float, kappa: float, cfg) -> float:
+    """Extra drag-equivalent force from tire lateral deformation in corners."""
+    a_lat = kappa * v ** 2          # lateral acceleration (m/s^2)
+    return cfg.vehicle.Crr_lateral * cfg.vehicle.mass * cfg.env.g * (a_lat / cfg.env.g)
