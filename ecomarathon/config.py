@@ -103,7 +103,7 @@ class Race:
 
 @dataclass
 class Limits:
-    a_lat_max: float = 4.0          # m/s^2 lateral accel -> corner speed caps; CALIBRATE
+    a_lat_max: float = 2.0          # m/s^2 lateral accel -> corner speed caps; CALIBRATE
     v_max: float = 40.0 / 3.6       # m/s absolute safety speed cap
     v_min: float = 20.0 / 3.6        # m/s lower bound of the DP speed grid
     a_brake: float = 2.0            # m/s^2 service-braking decel (used only when forced)
