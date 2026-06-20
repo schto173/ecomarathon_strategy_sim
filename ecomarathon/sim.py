@@ -56,11 +56,11 @@ def step_segment(v0: float, i: int, u: int, track: Track, cfg: Config):
 
     def dvds(vv: float) -> float:
         vv = vv if vv > _V_FLOOR else _V_FLOOR
-        a_lat = kappa * vv ** 2                                          # ADD THIS
-        f_lat = cfg.vehicle.Crr_lateral * cfg.vehicle.mass * a_lat      # ADD THIS
+        a_lat = kappa * vv ** 2
+        f_lat_loss = cfg.vehicle.Crr_lateral * cfg.vehicle.mass * a_lat   # N
         base_accel = veh.net_accel(vv, st, ct, u, cfg)
-        lateral_decel = f_lat / (cfg.vehicle.mass * (1.0 + cfg.vehicle.inertia_factor))  # ADD THIS
-        return (base_accel - lateral_decel) / vv                        # CHANGE THIS
+        lateral_decel = f_lat_loss / cfg.vehicle.m_eff
+        return (base_accel - lateral_decel) / vv
 
     v = v0
     dt = 0.0
