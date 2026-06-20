@@ -9,11 +9,13 @@ the browser; the heavy lifting (the DP we calibrated against telemetry) stays in
 """
 from __future__ import annotations
 
+import json
 import os
+import re
 import sys
 
 import numpy as np
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
@@ -28,6 +30,34 @@ from ecomarathon.strategy import extract_strategy  # noqa: E402
 
 STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 CSV = os.path.join(ROOT, "data", "silesia_ring.csv")
+
+# ---- custom preset storage (server-side, persistent) ---------------------
+PRESETS_DIR = os.path.join(ROOT, "presets")
+PRESETS_FILE = os.path.join(PRESETS_DIR, "presets.json")
+
+
+def _load_presets() -> dict:
+    """Return the full {name: params} preset store (empty if none yet)."""
+    try:
+        with open(PRESETS_FILE, "r") as fh:
+            data = json.load(fh)
+            return data if isinstance(data, dict) else {}
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+
+def _write_presets(store: dict) -> None:
+    os.makedirs(PRESETS_DIR, exist_ok=True)
+    with open(PRESETS_FILE, "w") as fh:
+        json.dump(store, fh, indent=2, sort_keys=True)
+
+
+def _clean_name(name: str) -> str:
+    name = (name or "").strip()
+    if not name or len(name) > 60 or not re.match(r"^[\w .()+\-/½’']+$", name):
+        raise HTTPException(status_code=400, detail="Invalid preset name")
+    return name
+
 
 app = FastAPI(title="LAM Ecoquest Strategy Engine")
 _track_cache: dict = {}
@@ -45,16 +75,6 @@ def base_params() -> dict:
         "n_laps": c.race.n_laps, "total_time_limit": c.race.total_time_limit,
         "time_margin": c.race.time_margin, "a_lat_max": c.limits.a_lat_max,
         "quality": "fast",
-    }
-
-
-def presets() -> dict:
-    b = base_params()
-    cal = {**b, "Cd": 0.0162, "Crr": 0.0098, "burn_power_wheel": 270.0}
-    return {
-        "default": dict(b),
-        "calibrated_2025": cal,
-        "halve_crr": {**cal, "Crr": round(0.0098 / 2, 4)},
     }
 
 
@@ -138,7 +158,6 @@ def init():
             "corners": [[round(d, 0), round(r, 1), round(v, 1)] for (d, r, v) in track.corners()],
         },
         "defaults": base_params(),
-        "presets": presets(),
     }
 
 
@@ -146,6 +165,46 @@ def init():
 async def optimize(req: Request):
     p = await req.json()
     return await run_in_threadpool(_do_optimize, p)
+
+
+# ---- preset CRUD ---------------------------------------------------------
+@app.get("/api/presets")
+def list_presets():
+    """Return the names of all saved presets (sorted)."""
+    return {"presets": sorted(_load_presets().keys(), key=str.lower)}
+
+
+@app.get("/api/presets/{name}")
+def get_preset(name: str):
+    """Return the full parameter set stored under ``name``."""
+    store = _load_presets()
+    if name not in store:
+        raise HTTPException(status_code=404, detail="Preset not found")
+    return {"name": name, "params": store[name]}
+
+
+@app.post("/api/presets")
+async def save_preset(req: Request):
+    """Create or overwrite a preset. Body: {name, params}. Stores ALL params sent."""
+    body = await req.json()
+    name = _clean_name(body.get("name", ""))
+    params = body.get("params")
+    if not isinstance(params, dict) or not params:
+        raise HTTPException(status_code=400, detail="Missing preset parameters")
+    store = _load_presets()
+    store[name] = params
+    _write_presets(store)
+    return {"ok": True, "name": name, "presets": sorted(store.keys(), key=str.lower)}
+
+
+@app.delete("/api/presets/{name}")
+def delete_preset(name: str):
+    store = _load_presets()
+    if name not in store:
+        raise HTTPException(status_code=404, detail="Preset not found")
+    del store[name]
+    _write_presets(store)
+    return {"ok": True, "presets": sorted(store.keys(), key=str.lower)}
 
 
 app.mount("/static", StaticFiles(directory=STATIC), name="static")

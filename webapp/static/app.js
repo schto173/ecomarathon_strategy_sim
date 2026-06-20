@@ -28,7 +28,13 @@ const GROUPS = [
   ]},
 ];
 
-let TRACK = null, PRESETS = null, STATE = {}, LAST = null;
+let TRACK = null, STATE = {}, LAST = null, PRESET_LIST = [];
+
+// shapes (burn zones, avg line …) rebuilt on each draw; kept so the hover
+// crosshair can be overlaid without wiping them out.
+let SPEED_SHAPES = [], ELEV_SHAPES = [];
+// indices of the hover-catcher and (initially empty) cursor traces in the map.
+let MAP_CURSOR_IDX = -1, MAP_CATCHER_IDX = -1;
 
 const LAYOUT = () => ({
   paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
@@ -123,11 +129,36 @@ function drawMap(res){
     traces.push({x:x.slice(a,b+2),y:y.slice(a,b+2),mode:'lines',
       line:{color:col,width:4.5},hoverinfo:'skip'});
   }));
-  TRACK.corners.forEach(c=>{ const i=Math.round(c[0]/TRACK.lap_length*x.length)%x.length;
-    traces.push({x:[x[i]],y:[y[i]],mode:'markers+text',text:[c[2].toFixed(0)],textposition:'top center',
-      textfont:{color:MUTE,size:9},marker:{color:'#0a0e15',size:7,line:{color:SIGNAL,width:1.5}},hoverinfo:'skip'});});
+
+  // Yellow markers: speed at the start and end of each acceleration (BURN) phase.
+  if(res.phases && res.phases.length){
+    const mx=[],my=[],mtxt=[];
+    res.phases.filter(p=>p.kind==='BURN').forEach(p=>{
+      const i0=Math.round(p.from_m/TRACK.lap_length*x.length)%x.length;
+      const i1=Math.round(p.to_m  /TRACK.lap_length*x.length)%x.length;
+      mx.push(x[i0]); my.push(y[i0]); mtxt.push(p.v_in.toFixed(0));
+      mx.push(x[i1]); my.push(y[i1]); mtxt.push(p.v_out.toFixed(0));
+    });
+    if(mx.length) traces.push({x:mx,y:my,mode:'markers+text',text:mtxt,textposition:'top center',
+      textfont:{color:SIGNAL,size:10},
+      marker:{color:SIGNAL,size:9,line:{color:'#0a0e15',width:1.5}},
+      hovertemplate:'%{text} km/h<extra></extra>'});
+  }
+
   traces.push({x:[x[0]],y:[y[0]],mode:'markers',marker:{symbol:'diamond',color:SIGNAL,size:12,line:{color:'#0a0e15',width:1}},hoverinfo:'skip'});
-  const lay=LAYOUT(); lay.margin={l:8,r:8,t:8,b:8};
+
+  // Invisible full-track hover catcher: pointNumber maps 1:1 to track index,
+  // letting the map drive the synchronized crosshair.
+  traces.push({x,y,mode:'markers',marker:{size:9,color:'rgba(0,0,0,0)'},
+    hovertemplate:'%{customdata:.0f} m<extra></extra>',customdata:TRACK.s});
+  MAP_CATCHER_IDX = traces.length-1;
+
+  // Cursor marker (synchronized hover indicator) — starts empty.
+  traces.push({x:[],y:[],mode:'markers',
+    marker:{symbol:'circle-open',color:SIGNAL,size:16,line:{color:SIGNAL,width:2.5}},hoverinfo:'skip'});
+  MAP_CURSOR_IDX = traces.length-1;
+
+  const lay=LAYOUT(); lay.margin={l:8,r:8,t:8,b:8}; lay.hovermode='closest';
   lay.xaxis={visible:false}; lay.yaxis={visible:false,scaleanchor:'x',scaleratio:1};
   Plotly.react('mapPlot',traces,lay,CFG);
 }
@@ -137,6 +168,7 @@ function drawSpeed(res){
   lay.yaxis.title={text:'km/h',font:{size:9}};
   const avg=res.summary.avg_speed_kmh;
   lay.shapes.push({type:'line',xref:'paper',x0:0,x1:1,yref:'y',y0:avg,y1:avg,line:{color:GLIDE,width:1,dash:'dot'}});
+  SPEED_SHAPES = lay.shapes.slice();
   Plotly.react('speedPlot',[
     {x:s,y:res.cap_kmh,mode:'lines',line:{color:DANGER,width:1,dash:'dash'},name:'cap',hovertemplate:'cap %{y:.0f}<extra></extra>'},
     {x:s,y:res.v_kmh,mode:'lines',line:{color:'#cfe0ee',width:2},name:'speed',hovertemplate:'%{x:.0f} m · %{y:.1f} km/h<extra></extra>'},
@@ -145,11 +177,47 @@ function drawSpeed(res){
 function drawElev(res){
   const s=TRACK.s, lay=LAYOUT(); lay.shapes=burnShapes(res.u,s);
   lay.yaxis.title={text:'m',font:{size:9}};
+  ELEV_SHAPES = lay.shapes.slice();
   Plotly.react('elevPlot',[
     {x:s,y:TRACK.elev,mode:'lines',line:{color:'#8aa0b6',width:1.6},fill:'tozeroy',
       fillcolor:'rgba(138,160,182,.05)',hovertemplate:'%{x:.0f} m · %{y:.1f} m<extra></extra>'},
   ],lay,CFG);
   Plotly.relayout('elevPlot',{'yaxis.range':[Math.min(...TRACK.elev)-0.5,Math.max(...TRACK.elev)+0.5]});
+}
+
+// ---- synchronized hover --------------------------------------------------
+function nearestIdx(distM){
+  const s=TRACK.s; if(distM<=s[0]) return 0; if(distM>=s[s.length-1]) return s.length-1;
+  let lo=0, hi=s.length-1;                      // binary search (s is sorted)
+  while(hi-lo>1){ const mid=(lo+hi)>>1; if(s[mid]<distM) lo=mid; else hi=mid; }
+  return (distM-s[lo] <= s[hi]-distM) ? lo : hi;
+}
+function vline(x){ return {type:'line',xref:'x',x0:x,x1:x,yref:'paper',y0:0,y1:1,
+  line:{color:SIGNAL,width:1.2,dash:'dot'}}; }
+function showCursor(i){
+  if(i==null||i<0||!TRACK) return;
+  const x=TRACK.s[i];
+  Plotly.relayout('speedPlot',{shapes:SPEED_SHAPES.concat([vline(x)])});
+  Plotly.relayout('elevPlot', {shapes:ELEV_SHAPES.concat([vline(x)])});
+  if(MAP_CURSOR_IDX>=0)
+    Plotly.restyle('mapPlot',{x:[[TRACK.x[i]]],y:[[TRACK.y[i]]]},[MAP_CURSOR_IDX]);
+}
+function hideCursor(){
+  if(!TRACK) return;
+  Plotly.relayout('speedPlot',{shapes:SPEED_SHAPES});
+  Plotly.relayout('elevPlot', {shapes:ELEV_SHAPES});
+  if(MAP_CURSOR_IDX>=0) Plotly.restyle('mapPlot',{x:[[]],y:[[]]},[MAP_CURSOR_IDX]);
+}
+function wireHover(){
+  ['speedPlot','elevPlot'].forEach(id=>{
+    const el=$('#'+id);
+    el.on('plotly_hover',ev=>showCursor(nearestIdx(ev.points[0].x)));
+    el.on('plotly_unhover',hideCursor);
+  });
+  const m=$('#mapPlot');
+  m.on('plotly_hover',ev=>{ const p=ev.points[0];
+    if(p && p.curveNumber===MAP_CATCHER_IDX) showCursor(p.pointNumber); });
+  m.on('plotly_unhover',hideCursor);
 }
 function drawPareto(res){
   const p=res.pareto, t=p.map(r=>r[1]), f=p.map(r=>r[2]), lay=LAYOUT();
@@ -198,19 +266,74 @@ function exportJson(){
   download('strategy.json',JSON.stringify({summary:LAST.summary,phases:LAST.phases},null,2),'application/json');
 }
 
+// ---- custom presets (server-side CRUD) -----------------------------------
+function fillPresetSelect(keepSel){
+  const sel=$('#presetSelect'), prev=keepSel ?? sel.value;
+  sel.innerHTML='';
+  if(!PRESET_LIST.length){
+    sel.innerHTML='<option value="">— no saved presets —</option>';
+  }else{
+    PRESET_LIST.forEach(n=>{ const o=document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o); });
+    if(PRESET_LIST.includes(prev)) sel.value=prev;
+  }
+  const has=PRESET_LIST.length>0;
+  $('#presetLoad').disabled=!has; $('#presetDelete').disabled=!has;
+}
+async function refreshPresets(keepSel){
+  try{
+    const d = await (await fetch('/api/presets')).json();
+    PRESET_LIST = d.presets || [];
+  }catch(e){ PRESET_LIST=[]; console.error(e); }
+  fillPresetSelect(keepSel);
+}
+async function loadSelectedPreset(){
+  const name=$('#presetSelect').value; if(!name) return;
+  try{
+    const d = await (await fetch('/api/presets/'+encodeURIComponent(name))).json();
+    if(d.params){ applyParams(d.params); syncQualitySeg(); optimise(); }
+  }catch(e){ console.error(e); setStatus('dq','LOAD FAILED'); }
+}
+async function saveCurrentPreset(){
+  const inp=$('#presetName'), name=inp.value.trim();
+  if(!name){ inp.focus(); return; }
+  if(PRESET_LIST.includes(name) && !confirm(`Overwrite preset “${name}”?`)) return;
+  try{
+    const r = await fetch('/api/presets',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name, params:{...STATE}})});
+    if(!r.ok){ const e=await r.json().catch(()=>({})); throw new Error(e.detail||'save failed'); }
+    inp.value=''; await refreshPresets(name);
+  }catch(e){ console.error(e); alert('Could not save preset: '+e.message); }
+}
+async function deleteSelectedPreset(){
+  const name=$('#presetSelect').value; if(!name) return;
+  if(!confirm(`Delete preset “${name}”?`)) return;
+  try{
+    await fetch('/api/presets/'+encodeURIComponent(name),{method:'DELETE'});
+    await refreshPresets();
+  }catch(e){ console.error(e); }
+}
+function syncQualitySeg(){   // reflect STATE.quality in the segmented control
+  document.querySelectorAll('.seg-btn').forEach(x=>
+    x.classList.toggle('is-active', x.dataset.q===STATE.quality));
+}
+
 // ---- wiring --------------------------------------------------------------
 async function boot(){
   const data = await (await fetch('/api/init')).json();
-  TRACK=data.track; PRESETS=data.presets; STATE={...data.presets.calibrated_2025};
+  TRACK=data.track; STATE={...data.defaults};
   $('#circuitMeta').textContent=`${TRACK.lap_length.toFixed(0)} m · ${TRACK.corners.length} corners`;
   renderControls();
+  syncQualitySeg();
   drawMap({u:new Array(TRACK.x.length).fill(0)});   // show track immediately
 
-  document.querySelectorAll('.preset').forEach(b=>b.onclick=()=>{
-    document.querySelectorAll('.preset').forEach(x=>x.classList.remove('is-active'));
-    b.classList.add('is-active');
-    applyParams({...PRESETS[b.dataset.preset], quality:STATE.quality}); optimise();
-  });
+  await refreshPresets();
+
+  $('#presetLoad').onclick=loadSelectedPreset;
+  $('#presetSave').onclick=saveCurrentPreset;
+  $('#presetDelete').onclick=deleteSelectedPreset;
+  $('#presetName').addEventListener('keydown',e=>{ if(e.key==='Enter') saveCurrentPreset(); });
+  $('#presetSelect').addEventListener('dblclick',loadSelectedPreset);
+
   document.querySelectorAll('.seg-btn').forEach(b=>b.onclick=()=>{
     document.querySelectorAll('.seg-btn').forEach(x=>x.classList.remove('is-active'));
     b.classList.add('is-active'); STATE.quality=b.dataset.q;
@@ -218,6 +341,7 @@ async function boot(){
   $('#runBtn').onclick=()=>optimise();
   $('#expCsv').onclick=exportCsv; $('#expJson').onclick=exportJson;
 
-  optimise();   // first run on the calibrated preset
+  await optimise();   // first run on defaults
+  wireHover();        // attach synchronized-hover handlers once plots exist
 }
 boot();

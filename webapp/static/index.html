@@ -39,10 +39,16 @@
 
     <div class="presets">
       <span class="mini-label">PRESETS</span>
-      <div class="preset-row">
-        <button class="preset" data-preset="default">DEFAULT</button>
-        <button class="preset is-active" data-preset="calibrated_2025">CALIBRATED ’25</button>
-        <button class="preset" data-preset="halve_crr">½ Crr</button>
+      <div class="preset-load">
+        <select id="presetSelect" class="preset-select">
+          <option value="">— no saved presets —</option>
+        </select>
+        <button class="preset-act load" id="presetLoad" title="Load selected preset">LOAD</button>
+        <button class="preset-act del" id="presetDelete" title="Delete selected preset">✕</button>
+      </div>
+      <div class="preset-save">
+        <input type="text" id="presetName" class="preset-name" placeholder="name current params…" maxlength="60">
+        <button class="preset-act save" id="presetSave" title="Save current params as preset">SAVE</button>
       </div>
     </div>
 

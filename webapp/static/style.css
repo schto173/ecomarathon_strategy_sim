@@ -70,13 +70,25 @@ body::before{
 .controls::-webkit-scrollbar{width:8px}.controls::-webkit-scrollbar-thumb{background:var(--edge);border-radius:4px}
 .mini-label{display:block;font-family:var(--mono);font-size:9px;letter-spacing:3px;color:var(--muted2);margin:0 0 7px 2px}
 .presets,.quality{padding:13px 14px 4px}
-.preset-row{display:flex;gap:6px}
-.preset{flex:1;font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--muted);
-  background:rgba(255,255,255,.02);border:1px solid var(--edge);padding:8px 4px;cursor:pointer;
-  transition:.15s;border-radius:2px}
-.preset:hover{color:var(--txt);border-color:var(--edge2)}
-.preset.is-active{color:#0a0e15;background:var(--burn);border-color:var(--burn);font-weight:700;
-  box-shadow:0 0 16px rgba(255,106,31,.4)}
+.preset-load,.preset-save{display:flex;gap:6px}
+.preset-save{margin-top:6px}
+.preset-select,.preset-name{flex:1;min-width:0;font-family:var(--mono);font-size:11px;letter-spacing:.5px;
+  color:var(--txt);background:rgba(255,255,255,.03);border:1px solid var(--edge);border-radius:2px;
+  padding:7px 8px;transition:.15s}
+.preset-select{cursor:pointer}
+.preset-select:focus,.preset-name:focus{outline:none;border-color:var(--burn);box-shadow:0 0 0 1px rgba(255,106,31,.3)}
+.preset-name::placeholder{color:var(--muted2)}
+.preset-act{font-family:var(--mono);font-size:10px;letter-spacing:1px;font-weight:700;cursor:pointer;
+  border-radius:2px;padding:7px 10px;transition:.15s;white-space:nowrap}
+.preset-act.load{color:var(--glide);background:rgba(31,224,168,.08);border:1px solid rgba(31,224,168,.3)}
+.preset-act.load:hover{background:rgba(31,224,168,.18);box-shadow:0 0 12px rgba(31,224,168,.25)}
+.preset-act.save{color:#0a0e15;background:var(--burn);border:1px solid var(--burn);
+  box-shadow:0 0 12px rgba(255,106,31,.35)}
+.preset-act.save:hover{box-shadow:0 0 18px rgba(255,106,31,.6)}
+.preset-act.del{color:var(--danger);background:rgba(255,59,96,.06);border:1px solid rgba(255,59,96,.3);
+  padding:7px 9px}
+.preset-act.del:hover{background:rgba(255,59,96,.16)}
+.preset-act:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
 .seg{display:flex;border:1px solid var(--edge);border-radius:2px;overflow:hidden}
 .seg-btn{flex:1;font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--muted);
   background:transparent;border:0;padding:8px;cursor:pointer;transition:.15s}
