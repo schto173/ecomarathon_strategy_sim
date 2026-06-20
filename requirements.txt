@@ -1,0 +1,102 @@
+"""
+Central configuration for the Shell Eco-Marathon fuel-strategy simulator.
+
+Every physical / competition parameter lives here. Defaults are clearly-labelled
+literature values for a small SEM prototype; replace them with measured data when
+you have it. Nothing else in the codebase hard-codes a number.
+"""
+from __future__ import annotations
+from dataclasses import dataclass
+
+
+@dataclass
+class Config:
+    # ----------------------------------------------------------------- Vehicle
+    mass: float = 85.0              # kg, total (35 car + 50 driver) -- GIVEN
+    rot_inertia_factor: float = 1.04   # effective-mass multiplier for wheel/driveline inertia
+    frontal_area: float = 0.68 * 0.68  # m^2  (0.68 wide x 0.68 high) -- GIVEN
+    cd: float = 0.25               # drag coeff (boxy-but-aero). Cd*A ~ 0.116 m^2. TUNE
+    crr: float = 0.008             # rolling-resistance coeff (eco tyre; SEM tyres ~0.002). TUNE
+
+    # ------------------------------------------------------------------ Engine
+    power_max: float = 2 * 745.7   # W  (2 HP) -- GIVEN
+    pulse_power_frac: float = 0.80 # fraction of power_max used during a pulse. TUNE / optimised
+    bsfc_min: float = 320.0        # g/kWh best-point BSFC for a small 4-stroke (range 300-450)
+    bsfc_load_opt: float = 0.80    # load fraction at which BSFC is minimised
+    bsfc_beta_low: float = 0.60    # low-load BSFC penalty strength
+    bsfc_gamma_high: float = 0.15  # high-load BSFC penalty strength
+    drive_eff: float = 0.90        # chain / transmission efficiency
+    mu_long: float = 0.80          # longitudinal traction limit (tyre grip) for launch
+    restart_fuel_g: float = 0.10   # fuel-equivalent cost of one engine restart. TUNE.
+    #   Calibrated to team experience (~5x the idealised value): bump-start/ignition
+    #   effort + the fact that an ICE cannot be pulse-width-modulated. Higher -> the
+    #   optimiser prefers fewer, longer pulses.
+    grade_uphill_factor: float = 1.15  # extra resistance on CLIMBS only (driveline /
+    #   scrub losses under load). 1.0 = pure gravity; >1 = the car bogs down more on
+    #   rises than first-principles physics predicts. Downhill is left unchanged.
+    min_glide_time_s: float = 0.0  # reserved: minimum glide duration guard
+
+    # -------------------------------------------------------------------- Fuel
+    fuel_lhv: float = 43.5e6       # J/kg lower heating value, 98-octane gasoline
+    fuel_density: float = 0.745    # kg/L (for g <-> mL reporting)
+
+    # ------------------------------------------------------------- Environment
+    rho_air: float = 1.20          # kg/m^3 (~205 m altitude, ~25 C)
+    g: float = 9.81                # m/s^2
+
+    # -------------------------------------------------------------------- Grip
+    mu_lat: float = 0.20           # EFFECTIVE lateral grip (not tyre limit) -- calibrated
+    #   so tight corners (R~20 m) cap near ~18-20 km/h, matching team experience of
+    #   cornering far below the grip limit in a narrow eco car. The sqrt(R) law then
+    #   scales the cap with corner radius automatically. TUNE.
+    corner_safety: float = 0.80    # fraction of the cap actually carried through a bend
+    v_corner_cap: float = 40.0     # m/s ceiling on straights (where radius -> inf)
+
+    # -------------------------------------------------------- Track processing
+    elev_smooth_window: int = 21   # Savitzky-Golay window (m) for elevation
+    curv_smooth_window: int = 31   # Savitzky-Golay window (m) for curvature
+
+    # ------------------------------------------------------------- Competition
+    n_laps: int = 11               # Article 226
+    time_limit_s: float = 2100.0   # 35 min
+    time_safety_margin: float = 0.04   # optimise to 96% of the per-lap budget
+
+    # ---------------------------------------------------------------- Numerics
+    v_floor: float = 0.5           # m/s minimum speed (avoids div-by-zero)
+
+    # ----------------------------------------------------------- DP benchmark
+    dp_dv: float = 0.10            # m/s speed-grid resolution
+    dp_v_max: float = 14.0         # m/s top of speed grid (>> needed for ~25 km/h avg)
+    dp_n_ctrl: int = 9             # engine-power levels in the useful (pulse) range
+
+    # ------------------------------------------------------- Derived helpers
+    @property
+    def cda(self) -> float:
+        return self.cd * self.frontal_area
+
+    @property
+    def pulse_power(self) -> float:
+        return self.pulse_power_frac * self.power_max
+
+    @property
+    def m_eff(self) -> float:
+        return self.mass * self.rot_inertia_factor
+
+    @property
+    def weight(self) -> float:
+        return self.mass * self.g
+
+    def per_lap_time_budget(self, lap_length: float) -> float:
+        """Hard max time per lap (s) before disqualification, given the lap length."""
+        return self.time_limit_s / self.n_laps
+
+    def target_lap_time(self) -> float:
+        """Per-lap time we optimise against (budget minus safety margin)."""
+        return (self.time_limit_s / self.n_laps) * (1.0 - self.time_safety_margin)
+
+    def min_avg_speed(self, lap_length: float) -> float:
+        """Minimum average speed (m/s) to avoid DQ."""
+        return lap_length / (self.time_limit_s / self.n_laps)
+
+    def grams_to_ml(self, grams: float) -> float:
+        return grams / (self.fuel_density)  # g / (kg/L) = g / (g/mL) = mL

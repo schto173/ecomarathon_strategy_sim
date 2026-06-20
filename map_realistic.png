@@ -1,0 +1,178 @@
+"""
+Unit + sanity tests. Run directly:  python tests/test_model.py
+(No pytest dependency required.)
+"""
+from __future__ import annotations
+import os
+import sys
+import math
+import numpy as np
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from config import Config
+from track import load_track
+import vehicle
+from simulator import simulate_lap
+from strategy import PulseGlideController, ConstantSpeedController
+
+CSV = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                   "data", "silesia_ring.csv")
+
+_passed = 0
+_failed = 0
+
+
+def check(name, cond, detail=""):
+    global _passed, _failed
+    if cond:
+        _passed += 1
+        print(f"  PASS  {name}")
+    else:
+        _failed += 1
+        print(f"  FAIL  {name}  {detail}")
+
+
+def test_track():
+    cfg = Config()
+    t = load_track(CSV, cfg)
+    check("track loads >1300 points", t.n > 1300, f"n={t.n}")
+    check("lap length ~1320 m", 1315 < t.length < 1325, f"L={t.length:.2f}")
+    gap = math.hypot(t.x[0] - t.x[-1], t.y[0] - t.y[-1])
+    check("loop is closed (<1 m gap)", gap < 1.0, f"gap={gap:.3f}")
+    s = t.summary()
+    check("elevation range ~3 m", 2.5 < s["elev_range_m"] < 4.0, f"{s['elev_range_m']:.2f}")
+    check("max gradient is gentle (<3%)", s["max_grade_pct"] < 3.0, f"{s['max_grade_pct']:.2f}%")
+    check("corner cap positive & finite", 0 < s["min_corner_speed_ms"] < cfg.v_corner_cap,
+          f"{s['min_corner_speed_ms']:.2f}")
+
+
+def test_forces():
+    cfg = Config()
+    v = 8.0
+    drag = 0.5 * cfg.rho_air * cfg.cda * v * v
+    check("aero drag matches formula", abs(vehicle.aero_drag(v, cfg) - drag) < 1e-9)
+    roll = cfg.crr * cfg.mass * cfg.g
+    check("rolling matches formula (flat)", abs(vehicle.rolling_resistance(1.0, cfg) - roll) < 1e-9)
+    # grade: 10% uphill
+    sin_t = 0.1 / math.sqrt(1.01)
+    check("grade force sign (uphill +)", vehicle.grade_force(sin_t, cfg) > 0)
+    check("grade force sign (downhill -)", vehicle.grade_force(-sin_t, cfg) < 0)
+
+
+def test_engine():
+    cfg = Config()
+    check("fuel rate zero when engine off", vehicle.fuel_rate(0.0, cfg) == 0.0)
+    # BSFC minimum at the optimal load
+    b_opt = vehicle.bsfc(cfg.bsfc_load_opt, cfg)
+    check("BSFC minimum at load_opt", abs(b_opt - cfg.bsfc_min) < 1e-6, f"{b_opt:.1f}")
+    check("BSFC worse at low load", vehicle.bsfc(0.1, cfg) > b_opt)
+    # fuel rate at optimal point: bsfc_min[g/kWh] * P[kW] / 3600
+    P = cfg.bsfc_load_opt * cfg.power_max
+    expect = cfg.bsfc_min * (P / 1000.0) / 3600.0
+    check("fuel rate matches BSFC*power", abs(vehicle.fuel_rate(P, cfg) - expect) < 1e-9)
+    # traction grip-limited at very low speed
+    f = vehicle.traction_force(cfg.power_max, 0.5, cfg)
+    check("traction grip-limited at low v", f <= cfg.mu_long * cfg.mass * cfg.g + 1e-6)
+
+
+def test_glide_decel():
+    """A single engine-off integration step must decelerate at exactly the
+    drag+rolling+grade rate predicted analytically. Checked at segment 0, where
+    the entry speed equals v0 (no upstream accumulation)."""
+    cfg = Config()
+    t = load_track(CSV, cfg)
+    i = 0
+    v = 9.0  # == v0, so this isolates one integration step
+    f_res = vehicle.resistive_force(v, t.sin_theta[i], t.cos_theta[i], cfg)
+    a_expected = -f_res / cfg.m_eff
+    ds = t.ds[i]
+    v_next = math.sqrt(max(v * v + 2 * a_expected * ds, cfg.v_floor ** 2))
+
+    class Glide:
+        def reset(self): pass
+        def command(self, *a): return 0.0
+        def update(self, *a): pass
+
+    tel = simulate_lap(t, Glide(), cfg, v)
+    check("single glide step matches analytic", abs(tel.v[i] - v_next) < 1e-6,
+          f"sim={tel.v[i]:.6f} exp={v_next:.6f}")
+
+    # and the car must coast to a near-stop within the lap (no engine, finite track)
+    check("pure glide coasts to a stop within a lap", tel.v_end <= 1.0,
+          f"v_end={tel.v_end:.2f}")
+
+
+def test_steady_state_power():
+    cfg = Config()
+    v = 7.0
+    p = vehicle.steady_state_power(v, 0.0, 1.0, cfg)
+    # invert: power should equal F_res * v / eta
+    f = 0.5 * cfg.rho_air * cfg.cda * v * v + cfg.crr * cfg.mass * cfg.g
+    check("steady-state power consistent", abs(p - f * v / cfg.drive_eff) < 1e-6,
+          f"{p:.2f}")
+    check("25 km/h cruise power is tiny (<200 W)", p < 200.0, f"{p:.1f} W")
+
+
+def test_pg_beats_constant():
+    """Pulse-and-glide should use less fuel than holding a constant speed at a
+    similar average."""
+    cfg = Config()
+    t = load_track(CSV, cfg)
+    from simulator import simulate_continuous, lap_metrics
+
+    pg = PulseGlideController(t, cfg, v_low=6.0, v_high=9.0)
+    tel_pg, _, _, _, _ = simulate_continuous(t, pg, cfg, v0=6.0)
+    m_pg = lap_metrics(t, tel_pg, cfg)
+
+    cs = ConstantSpeedController(t, cfg, v_target=m_pg["avg_speed_ms"])
+    tel_cs, _, _, _, _ = simulate_continuous(t, cs, cfg, v0=m_pg["avg_speed_ms"])
+    m_cs = lap_metrics(t, tel_cs, cfg)
+
+    check("P&G uses less fuel than constant speed",
+          m_pg["fuel_g"] < m_cs["fuel_g"],
+          f"P&G={m_pg['fuel_g']:.3f}g  const={m_cs['fuel_g']:.3f}g "
+          f"(avg {m_pg['avg_speed_kmh']:.1f} vs {m_cs['avg_speed_kmh']:.1f} km/h)")
+
+
+def test_energy_balance():
+    """Core physics invariant: over a lap, wheel work delivered by the engine must
+    equal energy dissipated (drag+rolling+grade) plus the change in kinetic energy.
+    This is what guards against mis-counting fuel on a non-periodic lap."""
+    cfg = Config()
+    t = load_track(CSV, cfg)
+    pg = PulseGlideController(t, cfg, v_low=6.5, v_high=8.0)
+    tel = simulate_lap(t, pg, cfg, 6.5)
+
+    v_in = np.concatenate([[tel.v_start], tel.v[:-1]])
+    v_out = tel.v
+    v_mid = 0.5 * (v_in + v_out)
+    dt = np.diff(np.concatenate([[0.0], tel.t_cum]))
+
+    wheel_work = cfg.drive_eff * np.sum(tel.p * dt)
+    f_diss = (vehicle.aero_drag(v_mid, cfg)
+              + cfg.crr * cfg.mass * cfg.g * t.cos_theta
+              + vehicle.grade_force(t.sin_theta, cfg))
+    e_diss = np.sum(f_diss * t.ds)
+    dke = 0.5 * cfg.m_eff * (tel.v_end ** 2 - tel.v_start ** 2)
+
+    rel = abs(wheel_work - (e_diss + dke + tel.brake_energy)) / max(wheel_work, 1.0)
+    check("energy balance closes (wheel = dissipation + braking + dKE)", rel < 0.03,
+          f"wheel={wheel_work:.0f}J  diss+brake+dKE={e_diss+dke+tel.brake_energy:.0f}J  "
+          f"brake={tel.brake_energy:.0f}J  rel={rel:.3f}")
+
+
+def main():
+    print("\n--- track ---");            test_track()
+    print("--- forces ---");            test_forces()
+    print("--- engine ---");            test_engine()
+    print("--- glide deceleration ---"); test_glide_decel()
+    print("--- steady-state power ---"); test_steady_state_power()
+    print("--- energy balance ---");      test_energy_balance()
+    print("--- P&G vs constant ---");    test_pg_beats_constant()
+    print(f"\n{_passed} passed, {_failed} failed")
+    sys.exit(1 if _failed else 0)
+
+
+if __name__ == "__main__":
+    main()

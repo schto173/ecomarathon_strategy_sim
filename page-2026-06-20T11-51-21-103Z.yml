@@ -1,0 +1,157 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]: LAM ECOQUEST
+      - generic [ref=e6]: Silesia Ring · Pulse-and-Glide Strategy
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e9]: Fuel / lap
+        - generic [ref=e10]: 2.497g · 3.35 mL
+      - generic [ref=e11]:
+        - generic [ref=e12]: Economy
+        - generic [ref=e13]: 394km/L
+      - generic [ref=e14]:
+        - generic [ref=e15]: Lap time
+        - generic [ref=e16]: 181.9s
+      - generic [ref=e17]:
+        - generic [ref=e18]: DQ margin
+        - generic [ref=e19]: +9.0s
+      - generic [ref=e20]:
+        - generic [ref=e21]: Avg speed
+        - generic [ref=e22]: 26.1km/h
+      - generic [ref=e23]:
+        - generic [ref=e24]: Status · 11 laps
+        - generic [ref=e25]: FEASIBLE
+  - main [ref=e26]:
+    - generic [ref=e27]:
+      - generic [ref=e28]:
+        - generic:
+          - generic:
+            - img
+        - generic:
+          - generic [ref=e32]:
+            - button "Zoom in" [ref=e33] [cursor=pointer]: +
+            - button "Zoom out" [ref=e34] [cursor=pointer]: −
+          - generic [ref=e35]:
+            - link "Leaflet" [ref=e36] [cursor=pointer]:
+              - /url: https://leafletjs.com
+              - img [ref=e37]
+              - text: Leaflet
+            - text: "| © OpenStreetMap © CARTO"
+      - generic [ref=e41]:
+        - generic [ref=e42]: Colour by
+        - generic [ref=e43]:
+          - generic [ref=e44] [cursor=pointer]: Engine
+          - generic [ref=e45] [cursor=pointer]: Speed
+          - generic [ref=e46] [cursor=pointer]: Elevation
+      - generic [ref=e47]:
+        - generic [ref=e48]:
+          - text: Pulse
+          - text: Glide
+        - generic [ref=e52] [cursor=pointer]: Map
+      - generic [ref=e53]:
+        - generic [ref=e54]:
+          - generic [ref=e55]: DIST
+          - generic [ref=e56]: 0 m
+        - generic [ref=e57]:
+          - generic [ref=e58]: SPEED
+          - generic [ref=e59]: 34.6 km/h
+        - generic [ref=e60]:
+          - generic [ref=e61]: ENGINE
+          - generic [ref=e62]: ○ GLIDE
+        - generic [ref=e63]:
+          - generic [ref=e64]: ELEV
+          - generic [ref=e65]: 205.4 m
+    - generic [ref=e66]:
+      - generic [ref=e67]:
+        - heading "Strategy" [level=3] [ref=e68]
+        - generic [ref=e69]:
+          - generic [ref=e70]:
+            - generic [ref=e71]: Glide floor V_low
+            - generic [ref=e72]: 19.3 km/h
+          - slider [ref=e73]: "19.5"
+        - generic [ref=e74]:
+          - generic [ref=e75]:
+            - generic [ref=e76]: Pulse ceiling V_high
+            - generic [ref=e77]: 41.9 km/h
+          - slider [ref=e78]: "42"
+        - generic [ref=e79]:
+          - generic [ref=e80]:
+            - generic [ref=e81]: Pulse power
+            - generic [ref=e82]: 79%
+          - slider [ref=e83]: "0.79"
+        - generic [ref=e84]:
+          - button "⟳ Optimise" [ref=e85] [cursor=pointer]
+          - button "Reset" [ref=e86] [cursor=pointer]
+      - generic [ref=e87]:
+        - heading "Vehicle" [level=3] [ref=e88]
+        - generic [ref=e89]:
+          - generic [ref=e90]:
+            - generic [ref=e91]: Total mass
+            - generic [ref=e92]: 85 kg
+          - slider [ref=e93]: "85"
+        - generic [ref=e94]:
+          - generic [ref=e95]:
+            - generic [ref=e96]: Drag coeff Cd
+            - generic [ref=e97]: "0.2500"
+          - slider [ref=e98]: "0.25"
+        - generic [ref=e99]:
+          - generic [ref=e100]:
+            - generic [ref=e101]: Rolling Crr
+            - generic [ref=e102]: "0.0080"
+          - slider [ref=e103]: "0.008"
+      - generic [ref=e104]:
+        - heading "Engine" [level=3] [ref=e105]
+        - generic [ref=e106]:
+          - generic [ref=e107]:
+            - generic [ref=e108]: Max power
+            - generic [ref=e109]: 1.49 kW
+          - slider [ref=e110]: "1.5"
+        - generic [ref=e111]:
+          - generic [ref=e112]:
+            - generic [ref=e113]: Best BSFC
+            - generic [ref=e114]: 320 g/kWh
+          - slider [ref=e115]: "320"
+        - generic [ref=e116]:
+          - generic [ref=e117]:
+            - generic [ref=e118]: Restart cost
+            - generic [ref=e119]: 0.1000 g
+          - slider [ref=e120]: "0.1"
+      - generic [ref=e121]:
+        - heading "Environment & Grip" [level=3] [ref=e122]
+        - generic [ref=e123]:
+          - generic [ref=e124]:
+            - generic [ref=e125]: Air density ρ
+            - generic [ref=e126]: 1.20 kg/m³
+          - slider [ref=e127]: "1.2"
+        - generic [ref=e128]:
+          - generic [ref=e129]:
+            - generic [ref=e130]: Corner grip μ eff
+            - generic [ref=e131]: "0.20"
+          - slider [ref=e132]: "0.2"
+        - generic [ref=e133]:
+          - generic [ref=e134]:
+            - generic [ref=e135]: Uphill penalty
+            - generic [ref=e136]: 1.15 ×
+          - slider [ref=e137]: "1.15"
+  - contentinfo [ref=e138]:
+    - generic [ref=e139]:
+      - generic [ref=e140]:
+        - text: Speed
+        - generic [ref=e141]: ·
+        - text: km/h
+        - generic [ref=e142]: 8 pulses · 26.1 avg · 0.25 g brake
+      - generic [ref=e144]:
+        - button "▶" [ref=e145] [cursor=pointer]
+        - slider [ref=e146]: "0"
+        - generic [ref=e147] [cursor=pointer]: ×4
+    - generic [ref=e149]:
+      - text: Elevation
+      - generic [ref=e150]: ·
+      - text: m
+      - generic [ref=e151]: Δ 3.3 m
+    - generic [ref=e154]:
+      - text: Cumulative fuel
+      - generic [ref=e155]: ·
+      - text: g
+      - generic [ref=e156]: 11-lap 36.9 mL
