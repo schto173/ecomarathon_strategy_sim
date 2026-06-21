@@ -1,0 +1,50 @@
+{
+  "Alpha": {
+    "params": {
+      "mass_car": 36,
+      "mass_driver": 50,
+      "Cd": 0.18,
+      "frontal_area": 0.46,
+      "Crr": 0.0015,
+      "driveline_eff": 0.9,
+      "inertia_factor": 0.03,
+      "corner_loss": 0.3,
+      "burn_power_wheel": 600,
+      "bsfc": 400,
+      "restart_fuel_g": 0.005,
+      "rho": 1.2,
+      "wind_speed_kmh": 5,
+      "wind_dir_deg": 10,
+      "n_laps": 11,
+      "total_time_limit": 2100,
+      "time_margin": 0.03,
+      "a_lat_max": 2.0,
+      "quality": "fast"
+    },
+    "created": 1782000905.055221
+  },
+  "Bravo": {
+    "params": {
+      "mass_car": 40,
+      "mass_driver": 50,
+      "Cd": 0.2,
+      "frontal_area": 0.46,
+      "Crr": 0.002,
+      "driveline_eff": 0.9,
+      "inertia_factor": 0.03,
+      "corner_loss": 0.0,
+      "burn_power_wheel": 600,
+      "bsfc": 400,
+      "restart_fuel_g": 0.005,
+      "rho": 1.2,
+      "wind_speed_kmh": 0,
+      "wind_dir_deg": 0,
+      "n_laps": 11,
+      "total_time_limit": 2100,
+      "time_margin": 0.03,
+      "a_lat_max": 2.0,
+      "quality": "fast"
+    },
+    "created": 1782000906.0929468
+  }
+}

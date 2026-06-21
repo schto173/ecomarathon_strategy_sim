@@ -1,0 +1,249 @@
+#!/usr/bin/env python3
+"""LAM Ecoquest Strategy Engine — local web app.
+
+A thin FastAPI wrapper around the *validated* burn-and-coast optimiser. Run it and open
+the browser; the heavy lifting (the DP we calibrated against telemetry) stays in Python.
+
+    pip install fastapi uvicorn          # (already present in this environment)
+    python webapp/app.py                 # -> http://127.0.0.1:8000
+"""
+from __future__ import annotations
+
+import json
+import os
+import re
+import sys
+
+import numpy as np
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from starlette.concurrency import run_in_threadpool
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT)
+
+from ecomarathon.config import Config              # noqa: E402
+from ecomarathon.track import load_track           # noqa: E402
+from ecomarathon.optimize import DPOptimizer       # noqa: E402
+from ecomarathon.strategy import extract_strategy  # noqa: E402
+
+STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+CSV = os.path.join(ROOT, "data", "silesia_ring.csv")
+
+# ---- custom preset storage (server-side, persistent) ---------------------
+PRESETS_DIR = os.path.join(ROOT, "presets")
+PRESETS_FILE = os.path.join(PRESETS_DIR, "presets.json")
+
+
+def _load_presets() -> dict:
+    """Return the preset store as ``{name: {"params": {...}, "created": <ts>}}``.
+
+    Tolerates the legacy flat ``{name: params}`` format, normalising it on read and
+    backfilling a ``created`` order so the UI can always honour "first created".
+    """
+    try:
+        with open(PRESETS_FILE, "r") as fh:
+            data = json.load(fh)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    store, seq = {}, 0.0
+    for name, val in data.items():
+        if isinstance(val, dict) and "params" in val:
+            store[name] = {"params": val.get("params") or {},
+                           "created": float(val.get("created", seq))}
+        else:                                    # legacy flat record
+            store[name] = {"params": val or {}, "created": seq}
+        seq += 1.0
+    return store
+
+
+def _write_presets(store: dict) -> None:
+    os.makedirs(PRESETS_DIR, exist_ok=True)
+    with open(PRESETS_FILE, "w") as fh:
+        json.dump(store, fh, indent=2)
+
+
+def _ordered_names(store: dict) -> list:
+    """Preset names ordered by creation time (oldest first), tie-break by name."""
+    return [n for n, _ in sorted(store.items(),
+                                 key=lambda kv: (kv[1].get("created", 0.0), kv[0].lower()))]
+
+
+def _clean_name(name: str) -> str:
+    name = (name or "").strip()
+    if not name or len(name) > 60 or not re.match(r"^[\w .()+\-/½’']+$", name):
+        raise HTTPException(status_code=400, detail="Invalid preset name")
+    return name
+
+
+app = FastAPI(title="LAM Ecoquest Strategy Engine")
+_track_cache: dict = {}
+
+
+def base_params() -> dict:
+    c = Config()
+    return {
+        "mass_car": c.vehicle.mass_car, "mass_driver": c.vehicle.mass_driver,
+        "Cd": c.vehicle.Cd, "frontal_area": round(c.vehicle.frontal_area, 4),
+        "Crr": c.vehicle.Crr, "driveline_eff": c.vehicle.driveline_eff,
+        "inertia_factor": c.vehicle.inertia_factor, "corner_loss": c.vehicle.corner_loss,
+        "burn_power_wheel": c.engine.burn_power_wheel, "bsfc": c.engine.bsfc,
+        "restart_fuel_g": c.engine.restart_fuel_g, "rho": c.env.rho,
+        "wind_speed_kmh": c.env.wind_speed_kmh, "wind_dir_deg": c.env.wind_dir_deg,
+        "n_laps": c.race.n_laps, "total_time_limit": c.race.total_time_limit,
+        "time_margin": c.race.time_margin, "a_lat_max": c.limits.a_lat_max,
+        "quality": "fast",
+    }
+
+
+def build_config(p: dict) -> Config:
+    c = Config()
+    c.vehicle.mass_car = float(p["mass_car"]); c.vehicle.mass_driver = float(p["mass_driver"])
+    c.vehicle.Cd = float(p["Cd"]); c.vehicle.frontal_area = float(p["frontal_area"])
+    c.vehicle.Crr = float(p["Crr"]); c.vehicle.driveline_eff = float(p["driveline_eff"])
+    c.vehicle.inertia_factor = float(p["inertia_factor"])
+    c.vehicle.corner_loss = float(p.get("corner_loss", c.vehicle.corner_loss))
+    c.engine.burn_power_wheel = float(p["burn_power_wheel"]); c.engine.bsfc = float(p["bsfc"])
+    c.engine.restart_fuel_g = float(p["restart_fuel_g"]); c.env.rho = float(p["rho"])
+    c.env.wind_speed_kmh = float(p.get("wind_speed_kmh", 0.0))
+    c.env.wind_dir_deg = float(p.get("wind_dir_deg", 0.0))
+    c.race.n_laps = int(p["n_laps"]); c.race.total_time_limit = float(p["total_time_limit"])
+    c.race.time_margin = float(p["time_margin"]); c.limits.a_lat_max = float(p["a_lat_max"])
+    if p.get("quality") == "fast":                    # interactive: coarser speed grid
+        c.solver.lam_iters = 10; c.solver.v_step = 0.34 / 3.6; c.solver.rollout_laps = 6
+    return c
+
+
+def get_track(a_lat_max: float, v_max: float):
+    key = round(a_lat_max, 3)
+    if key not in _track_cache:
+        _track_cache[key] = load_track(CSV, a_lat_max=a_lat_max, v_max=v_max)
+    return _track_cache[key]
+
+
+def _do_optimize(p: dict) -> dict:
+    c = build_config(p)
+    track = get_track(c.limits.a_lat_max, c.limits.v_max)
+    opt = DPOptimizer(track, c)
+    tgt = p.get("target_override")
+    res = opt.optimize(target_lap_time=float(tgt) if tgt else None)
+    strat = extract_strategy(track, res.traj)
+    n = track.n
+    km_l = (track.lap_length / 1000.0) / (res.lap_fuel_ml / 1000.0) if res.lap_fuel_ml > 0 else 0.0
+    lap_total = res.lap_time * c.race.n_laps
+    margin = c.race.total_time_limit - lap_total
+    cap = np.minimum(track.v_cap_point[:n], c.limits.v_max) * 3.6
+    return {
+        "feasible": bool(res.feasible and margin >= 0),
+        "summary": {
+            "lap_time": round(res.lap_time, 1), "fuel_ml": round(res.lap_fuel_ml, 3),
+            "fuel_g": round(res.lap_fuel_g, 3), "km_l": round(km_l, 0),
+            "n_pulses": int(res.n_pulses),
+            "avg_speed_kmh": round(track.lap_length / res.lap_time * 3.6, 2),
+            "engine_on_frac": round(float(np.mean(res.u == 1)) * 100, 1),
+            "vmin_kmh": round(float(res.traj.v[:n].min()) * 3.6, 1),
+            "vmax_kmh": round(float(res.traj.v[:n].max()) * 3.6, 1),
+            "lap_total_s": round(lap_total, 1), "fuel_total_ml": round(res.lap_fuel_ml * c.race.n_laps, 1),
+            "margin_s": round(margin, 1), "n_laps": c.race.n_laps,
+            "time_limit_s": c.race.total_time_limit, "target_lap_time": round(res.target_lap_time, 1),
+            "burn_dist": round(strat.burn_dist, 0), "glide_dist": round(strat.glide_dist, 0),
+        },
+        "v_kmh": np.round(res.traj.v[:n] * 3.6, 2).tolist(),
+        "u": [int(x) for x in res.u[:n]],
+        "cap_kmh": np.round(cap, 1).tolist(),
+        "phases": [{"kind": ph.kind, "from_m": round(ph.s0 % track.lap_length, 0),
+                    "to_m": round(ph.s1 % track.lap_length, 0), "len_m": round(ph.length, 0),
+                    "v_in": round(ph.v0 * 3.6, 1), "v_out": round(ph.v1 * 3.6, 1)} for ph in strat.phases],
+        "pareto": [[round(l, 5), round(t, 1), round(ml, 3), int(pu)] for (l, t, ml, pu) in opt.pareto()],
+    }
+
+
+@app.get("/")
+def index():
+    return FileResponse(os.path.join(STATIC, "index.html"))
+
+
+@app.get("/api/init")
+def init():
+    c = Config()
+    track = get_track(c.limits.a_lat_max, c.limits.v_max)
+    n = track.n
+    return {
+        "track": {
+            "s": np.round(track.s, 1).tolist(),
+            "x": np.round(track.x, 2).tolist(),
+            "y": np.round(track.y, 2).tolist(),
+            "elev": np.round(track.elev_s, 3).tolist(),
+            "cap_kmh": np.round(np.minimum(track.v_cap_point, c.limits.v_max) * 3.6, 1).tolist(),
+            "lap_length": round(track.lap_length, 1),
+            "corners": [[round(d, 0), round(r, 1), round(v, 1)] for (d, r, v) in track.corners()],
+        },
+        "defaults": base_params(),
+    }
+
+
+@app.post("/api/optimize")
+async def optimize(req: Request):
+    p = await req.json()
+    return await run_in_threadpool(_do_optimize, p)
+
+
+# ---- preset CRUD ---------------------------------------------------------
+@app.get("/api/presets")
+def list_presets():
+    """Names ordered oldest-first, plus the first-created name (for auto-load)."""
+    names = _ordered_names(_load_presets())
+    return {"presets": names, "first": names[0] if names else None}
+
+
+@app.get("/api/presets/{name}")
+def get_preset(name: str):
+    """Return the full parameter set stored under ``name``."""
+    store = _load_presets()
+    if name not in store:
+        raise HTTPException(status_code=404, detail="Preset not found")
+    return {"name": name, "params": store[name]["params"]}
+
+
+@app.post("/api/presets")
+async def save_preset(req: Request):
+    """Create or overwrite a preset. Body: {name, params}. Stores ALL params sent.
+
+    Overwriting keeps the original creation order so a renamed/edited preset does
+    not jump to the end of the list.
+    """
+    import time
+    body = await req.json()
+    name = _clean_name(body.get("name", ""))
+    params = body.get("params")
+    if not isinstance(params, dict) or not params:
+        raise HTTPException(status_code=400, detail="Missing preset parameters")
+    store = _load_presets()
+    created = store[name]["created"] if name in store else time.time()
+    store[name] = {"params": params, "created": created}
+    _write_presets(store)
+    names = _ordered_names(store)
+    return {"ok": True, "name": name, "presets": names, "first": names[0] if names else None}
+
+
+@app.delete("/api/presets/{name}")
+def delete_preset(name: str):
+    store = _load_presets()
+    if name not in store:
+        raise HTTPException(status_code=404, detail="Preset not found")
+    del store[name]
+    _write_presets(store)
+    names = _ordered_names(store)
+    return {"ok": True, "presets": names, "first": names[0] if names else None}
+
+
+app.mount("/static", StaticFiles(directory=STATIC), name="static")
+
+
+if __name__ == "__main__":
+    import uvicorn
+    print("LAM Ecoquest Strategy Engine -> http://0.0.0.0:8000")
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="warning")

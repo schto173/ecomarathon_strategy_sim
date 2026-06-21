@@ -1,0 +1,21 @@
+[
+  "tests/test_optimize.py::test_corner_caps_respected",
+  "tests/test_optimize.py::test_cycle_is_periodic",
+  "tests/test_optimize.py::test_fuel_is_sane",
+  "tests/test_optimize.py::test_meets_time_limit",
+  "tests/test_optimize.py::test_pareto_trend_and_determinism",
+  "tests/test_optimize.py::test_simulator_reproduces_optimizer",
+  "tests/test_optimize.py::test_strategy_phases_cover_lap",
+  "tests/test_physics.py::test_burn_accelerates_brake_decelerates_hardest",
+  "tests/test_physics.py::test_energy_conservation_coasting_with_drag",
+  "tests/test_physics.py::test_fuel_only_burned_while_burning",
+  "tests/test_physics.py::test_fuel_rate_units",
+  "tests/test_physics.py::test_glide_distance_matches_analytic_no_drag",
+  "tests/test_physics.py::test_grade_sign_downhill_accelerates_uphill_decelerates",
+  "tests/test_physics.py::test_rk4_step_is_accurate_vs_fine_euler",
+  "tests/test_track.py::test_corner_caps_positive_and_finite",
+  "tests/test_track.py::test_eight_corners_detected",
+  "tests/test_track.py::test_gradient_is_periodic_and_bounded",
+  "tests/test_track.py::test_lap_length_and_uniform_step",
+  "tests/test_track.py::test_loop_is_closed"
+]
